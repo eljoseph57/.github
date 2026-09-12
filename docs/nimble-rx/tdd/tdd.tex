@@ -157,7 +157,7 @@ This staged gating (pick $\rightarrow$ place $\rightarrow$ verify) is the system
 \subsection{Data Collection and Training}
  
 \begin{itemize}
-  \item \textbf{Data collection.} Data is collected as \texttt{LeRobotDataset} episodes, where each episode captures an instruction, a camera frame, and the corresponding 6-DOF grasp/place action chunk. The initial dataset comprises 10 episodes per item type, scaling toward $\geq$50 episodes per item type. Isaac Lab may be used to accelerate collection (e.g., via simulation).
+  \item \textbf{Data collection.} Data is collected as \texttt{LeRobotDataset} episodes, where each episode captures an instruction, a camera frame, and the corresponding 6-DOF grasp/place action chunk. The initial dataset comprises 10 episodes per item type, scaling toward $\geq$50 episodes per item type. Episodes themselves will be collected via human teleoperation on a keyboard for now.
   \item \textbf{Training.} The VLA is trained via supervised fine-tuning (SFT) on NORA 1.5 using its official fine-tuning script. Training and evaluation are performed per-item, which keeps the success signal dense relative to training on full multi-item sequences.
   \item \textit{Stretch goal:} Direct Preference Optimization (DPO) post-training, pairing successful vs.\ failed rollouts of the same instruction, using the YOLO CV and DataMatrix verdicts as preference labels.
 \end{itemize}
