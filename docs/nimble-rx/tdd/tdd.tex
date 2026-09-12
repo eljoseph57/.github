@@ -7,101 +7,47 @@
 \usepackage{longtable}
 \usepackage{booktabs}
 \usepackage{fancyhdr}
-
+ 
 %----------------------------
 % Title and Formatting
 %----------------------------
 \titleformat{\section}{\large\bfseries}{\thesection}{1em}{}
 \titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{1em}{}
 \setlist{nosep}
-
+ 
 \pagestyle{fancy}
 \fancyhf{}
 \rhead{Technical Design Document}
 \lhead{\leftmark}
 \cfoot{\thepage}
-
+ 
 \title{\textbf{Technical Design Document}\\[0.5em]\large Nimble RX}
-
+ 
 \author{Nimble @ WashU Robotics \\ \texttt{washurobotics@gmail.com}}
-
-% \author{
-%     \\
-%     Tyler Dinh, Lauren Gayle, Anling Zhu, Tenzin Dukdak, \\
-%     Billy Zhao, Noah Wolk, Mark Seidel, Horlasy Demakpor \\[0.3em]
-%     Software Team \\[0.2em]
-%     \texttt{\{dinh.t, gayle.l, anling, dtenzin, billy.z,} \\
-%     \texttt{n.j.wolk, m.m.seidel, horlasy.d\}@wustl.edu} \\\\
-%     Elizabeth Joseph, Alexis Luna, Yuxuan Shen, \\
-%     Kyle Okui, Gabe Minton \\[0.3em]
-%     Integration Team \\[0.2em]
-%     \texttt{\{elizabeth.j, alexis.l, notsure, k.okui, g.m.minton\}@wustl.edu}\\\\
-% }
-
+ 
 \date{\today}
-
+ 
 %----------------------------
 \begin{document}
 \maketitle
 \newpage
 \tableofcontents
 \newpage
-
-% %----------------------------
-% \section*{Action Items}
-% % This is to be removed on completion of this document.
-% \subsection*{Software}
-
-% \begin{enumerate}
-
-%   \item \textbf{LeRobot Dataset Collection} \\
-%   Collect a \texttt{LeRobotDataset} for eventual VLA fine-tuning. This is the highest priority task.
-%   \begin{itemize}
-%     \item Please follow the notes in the Architecture section about dataset collection.
-%     \item Prior to collection, the environment must be configured, including arm attachments (Logitech camera), and environmental objects (whiteboard, marker holder, etc.).
-%   \end{itemize}
-
-%   \item \textbf{VLA Fine-Tuning} \\
-%   Fine-tune NORA 1.5 for handwriting tasks. Zero-shot inference of the NORA 1.5 VLA has been observed to not perform well in this domain, so we will fine-tune it.
-%   \begin{itemize}
-%     \item NORA 1.5's pretraining data likely contains no robotic writing examples, making fine-tuning essential for this specific scenario of writing.
-%     \item Fine-tuning will use a HuggingFace \texttt{LeRobotDataset} via the fine-tuning script provided in the NORA 1.5 GitHub repository.
-%     \item The fine-tuned VLA will be released publicly on HuggingFace. This work has potential for academic writing, like a technical white paper or report given the project's structure. The fine-tuned model could also be shared on social media to gauge interest from researchers and practitioners. A faculty collaborator may be worth pursuing in the future after we have completed this project.
-%   \end{itemize}
-
-% \end{enumerate}
-
-% \subsection*{Integration}
-
-% \begin{enumerate}
-
-%   \item \textbf{Arm and Camera Wiring} \\
-%   Physical wiring of the arm and camera into the compute environment must be established and discussed with the team. Since the Roboserver will be running VLA inference and all associated scripts, a reliable communication channel between the arm, camera, and Roboserver is required.
-
-%   \item \textbf{Physical Environment Setup} \\
-%   The physical environment of the arm must be configured for data collection and fine-tuning as closely as possible. Mismatches between virtual and physical environments are a primary source of performance degradation.
-
-%   \item \textbf{Linear Actuator Integration} (\textit{in progress}) \\
-%   A linear actuator enables the arm to traverse the writing surface horizontally, extending its effective writing range. Without this, the robot cannot produce arbitrarily long text on a surface larger than its static range of motion. There will need to be discussion of how communication will travel both ways through the RoboServer.
-
-% \end{enumerate}
-% \newpage
-% %----------------------------
-
+ 
 %----------------------------
 \section{Overview}
-
+ 
 The purpose of this document is to present the technical design of \textbf{Nimble RX}, a natural-language-initiated prescription handling system built on Vision-Language-Action (VLA) models. The system is designed to reduce human error and speed up the manual, repetitive tasks relating to prescription handling, by allowing a pharmacist to issue spoken instructions (e.g., ``Pick up Box A and Bottle B.'') and have a robotic arm autonomously pick, place, and verify the correct item(s).
-
+ 
 This design document is intended for a technical audience with a background in computer science, robotics, or machine learning. Non-technical readers may find high-level summaries useful but should refer to supplementary documentation at the end of this document for background on the underlying mechanisms employed.
 \newpage
 %----------------------------
 \section{Problem}
-
+ 
 Prescription handling today is largely \textbf{manual}: pharmacy staff count and verify orders by hand. This is a repetitive task that is prone to human error, and mistakes in this domain carry real consequences.
-
+ 
 \subsection{The Core Problem}
-
+ 
 Manual prescription sorting and organization requires a human to:
 \begin{itemize}
   \item Visually identify each individual prescription item.
@@ -114,9 +60,9 @@ An autonomous system that generalizes prescription handling would:
   \item Reduce risk: apply automated, repeatable safety checks at every pick and place step.
   \item Increase trust: confirm instructions back to the user and verify final placement correctness before considering a task complete.
 \end{itemize}
-
+ 
 \subsection{The Core Goal}
-
+ 
 The goal is to develop a prescription handling system that can:
 \begin{itemize}
   \item Accept arbitrary natural-language voice instructions (e.g., ``Pick up Box A.'').
@@ -126,7 +72,7 @@ The goal is to develop a prescription handling system that can:
 \newpage
 %----------------------------
 \section{Requirements}
-
+ 
 \subsection*{Use Cases}
 \begin{itemize}
   \item As a pharmacist, I want to give a single spoken instruction to fetch multiple prescriptions in one trip so that I do not need to manually handle each one.
@@ -141,7 +87,7 @@ The goal is to develop a prescription handling system that can:
 \end{itemize}
 %----------------------------
 \subsection{Success Criteria}
-
+ 
 \subsection*{Metrics}
 \begin{itemize}
   \item Per-item success rate: $\geq$80\%, measured over 5 attempts per item type.
@@ -151,20 +97,20 @@ The goal is to develop a prescription handling system that can:
 \newpage
 %----------------------------
 \section{Architecture}
-
+ 
 \subsection*{Tech Stack}
 \begin{itemize}
   \item \textbf{VLA:} NORA 1.5
   \item \textbf{VLA Data Collection:} LeRobot (\texttt{LeRobotDataset})
   \item \textbf{Arm:} WidowX AI Base (7-DOF)
   \item \textbf{Cameras:} Intel RealSense D435i, Logitech (?)
-  \item \textbf{CV:} YOLO, OpenCV, pylibdmtx
+  \item \textbf{CV:} YOLO, OpenCV, Data Matrix (pylibdmtx)
   \item \textbf{Human Interaction:} Whisper (STT), Kokoro (TTS)
   \item \textbf{LLM:} Qwen 3.5 2B
   \item \textbf{Compute:} RoboServer GPU inference (local), WashU Compute Cluster (training)
   \item \textbf{Programming Languages:} Python, JSON
 \end{itemize}
-
+ 
 \subsection{End-to-End Pipeline}
  
 \begin{verbatim}
@@ -172,9 +118,14 @@ The goal is to develop a prescription handling system that can:
   -> Whisper STT -> schedule parser (local Qwen LLM)
   -> [(rx_i, container=i), ...]
   -> Kokoro TTS read-back confirmation
+  -> pre-pick DataMatrix scan pass over workspace
+       -> pylibdmtx decode -> {item_id: location} map
   -> for each (rx, container):
+       -> resolve rx -> item_id -> location via scan map
        -> VLA Inf. #1: pick -> collision check: pass -> continue | fail -> withhold
        -> VLA Inf. #2: place -> collision check: pass -> continue | fail -> withhold
+       -> post-place DataMatrix decode: match expected item_id?
+            -> pass -> continue | fail/unreadable -> withhold
        -> YOLO CV model: correctness check -> pass -> done | fail -> withhold
 \end{verbatim}
  
@@ -182,154 +133,98 @@ The goal is to develop a prescription handling system that can:
  
 A spoken instruction is first transcribed by Whisper STT. The resulting text is passed to a local Qwen LLM, which acts as a schedule parser: it converts free-form instructions into a structured list of \texttt{(rx\_i, container\_i)} pairs, one per prescription item referenced. Before execution, Kokoro TTS reads this parsed schedule back to the user, giving them a chance to catch and correct any misparse before any physical action is taken.
  
+\subsection{Item Identification via DataMatrix Barcodes}
+ 
+Each prescription bottle/box is labeled with a printed DataMatrix code encoding a short item ID (e.g., \texttt{RX003}), which maps to item metadata (name, expected container) in a local lookup table. DataMatrix is used instead of a 1D barcode because it packs more data into a smaller footprint and decodes reliably even when the label is rotated or viewed at an angle, and instead of OCR because decoding a printed code is a far more reliable and unambiguous read than parsing printed text under variable lighting and label orientation.
+ 
+Identification is performed in two passes using \texttt{pylibdmtx} against RGB frames from the environment camera:
+\begin{itemize}
+  \item \textbf{Pre-pick scan.} Before any VLA inference runs, a frame of the workspace is scanned and every visible DataMatrix code is decoded, producing an \texttt{\{item\_id: location\}} map. The schedule parser's \texttt{(rx\_i, container\_i)} pairs are resolved against this map so the VLA is handed a located, identified target rather than an ambiguous description.
+  \item \textbf{Post-place verification.} After the place action, the region YOLO identifies as the placed item is cropped and re-decoded. If the decoded ID does not match the expected \texttt{rx\_i} for that container, the placement is treated as failed and withheld/flagged, the same as a failed collision or CV check.
+\end{itemize}
+A failed or unreadable decode (blurry frame, glare, item edge-on to the camera) is always treated as a withhold-and-retry condition rather than a guess.
+ 
 \subsection{Per-Item Pick-and-Place with Safety Verification}
  
-For each \texttt{(rx, container)} pair in the parsed schedule, the system runs two VLA inference passes plus one CV verification pass:
+For each \texttt{(rx, container)} pair in the parsed schedule, the system runs two VLA inference passes plus CV/barcode verification:
 \begin{enumerate}
-  \item \textbf{Pick.} VLA inference \#1 produces a pick action for the item. A collision check evaluates the action before execution; on failure, the action is withheld rather than executed.
+  \item \textbf{Pick.} VLA inference \#1 produces a pick action for the item, using the location resolved from the pre-pick DataMatrix scan. A collision check evaluates the action before execution; on failure, the action is withheld rather than executed.
   \item \textbf{Place.} VLA inference \#2 produces a place action targeting the specified container. Again, a collision check gates execution.
-  \item \textbf{Verify.} A YOLO CV model checks whether the item was placed in the correct container. A pass marks the item complete; a fail causes the placement to be withheld/flagged rather than silently accepted.
+  \item \textbf{Verify.} A post-place DataMatrix decode confirms item identity, and a YOLO CV model checks whether the item was placed in the correct container. A pass on both marks the item complete; a fail on either causes the placement to be withheld/flagged rather than silently accepted.
 \end{enumerate}
-This three-stage gating (pick $\rightarrow$ place $\rightarrow$ verify) is the system's core safety mechanism: at no point is an action executed and assumed correct without a corresponding check.
+This staged gating (pick $\rightarrow$ place $\rightarrow$ verify) is the system's core safety mechanism: at no point is an action executed and assumed correct without a corresponding check. Barcode verification adds a hard, unambiguous identity check alongside YOLO's spatial/placement judgment, so the two checks catch different failure modes (wrong item vs.\ wrong location).
  
 \subsection{Data Collection and Training}
  
 \begin{itemize}
   \item \textbf{Data collection.} Data is collected as \texttt{LeRobotDataset} episodes, where each episode captures an instruction, a camera frame, and the corresponding 6-DOF grasp/place action chunk. The initial dataset comprises 10 episodes per item type, scaling toward $\geq$50 episodes per item type. Isaac Lab may be used to accelerate collection (e.g., via simulation).
   \item \textbf{Training.} The VLA is trained via supervised fine-tuning (SFT) on NORA 1.5 using its official fine-tuning script. Training and evaluation are performed per-item, which keeps the success signal dense relative to training on full multi-item sequences.
-  \item \textit{Stretch goal:} Direct Preference Optimization (DPO) post-training, pairing successful vs.\ failed rollouts of the same instruction, using the YOLO CV correctness verdicts as preference labels.
+  \item \textit{Stretch goal:} Direct Preference Optimization (DPO) post-training, pairing successful vs.\ failed rollouts of the same instruction, using the YOLO CV and DataMatrix verdicts as preference labels.
 \end{itemize}
  
 \subsection{Safety Model}
  
-The YOLO CV model serves two roles: (1) a post-placement evaluator that confirms an item landed in the correct container, and (2) a safety outcome predictor whose verdicts can be used to withhold unsafe actions and, in the DPO stretch goal, to generate preference labels for further training.
-
+The YOLO CV model and the DataMatrix verification step serve complementary roles: YOLO provides spatial localization (where an item/container is, and whether placement geometry looks correct), while DataMatrix decoding provides a hard identity check (is this actually the correct item). Together they act as a post-placement evaluator and safety outcome predictor, whose combined verdicts can be used to withhold unsafe or incorrect actions and, in the DPO stretch goal, to generate preference labels for further training.
+ 
 \subsection{High-Level Overview (HLD)}
 List all logical system components:
 \begin{itemize}
-  \item comp1
-  \item comp2
-  \item comp3
-  \item comp4
-  \item comp5
+  \item Voice input capture and transcription (Whisper STT)
+  \item Instruction-to-schedule parser (local Qwen LLM)
+  \item Read-back confirmation (Kokoro TTS)
+  \item DataMatrix pre-pick scan and post-place verification (pylibdmtx)
+  \item VLA pick/place inference engine (fine-tuned NORA 1.5)
+  \item Collision-checking safety gate (pre-execution)
+  \item Post-placement correctness verification (YOLO CV model)
 \end{itemize}
-
+ 
 Include diagrams as needed:
 \begin{center}
 %\includegraphics[width=0.8\textwidth]{architecture-diagram.png}
 \end{center}
-
+ 
 \subsection{API Design}
-List all APIs used for interaction between users or services.  
-Include HTTP methods, payloads, versions, and example requests/responses.  
+List all APIs used for interaction between users or services.
+Include HTTP methods, payloads, versions, and example requests/responses.
 Discuss future evolution of the APIs.
-
+ 
 \subsection{Data Storage and Model}
-Describe the data model and database choice.  
-Estimate data volume, forecast growth, and justify scalability.  
-Discuss data pipelines, ingestion, and pre-processing if applicable.
-
+Describe the data model and database choice.
+Estimate data volume, forecast growth, and justify scalability.
+Discuss data pipelines, ingestion, and pre-processing if applicable. The item ID $\rightarrow$ metadata lookup table (name, expected container) used to resolve decoded DataMatrix codes should be included in this data model.
+ 
 \subsection{Application / Component Level Design (LLD)}
 Provide detailed design of each system component, including data flow and control flow diagrams.
-
+ 
 USE DRAW.IO for this (can install on your computer)
-
+ 
 \newpage
-% %----------------------------
-% \section{Dependencies}
-% List external and internal dependencies.  
-% Document assumptions and risks associated with these dependencies.
-% %----------------------------
-% \subsection{Design Alternatives Considered}
-% Discuss alternative designs evaluated.  
-% Provide a comparison table highlighting trade-offs.
-
-% \begin{longtable}{@{}p{3cm}p{5cm}p{5cm}@{}}
-% \toprule
-% \textbf{Option} & \textbf{Pros} & \textbf{Cons} \\ \midrule
-% Option A & Scalable, cost-efficient & Complex to maintain \\
-% Option B & Easy to implement & Limited scalability \\ \bottomrule
-% \end{longtable}
-
-% \newpage
-% %----------------------------
-% \section{Cost Analysis}
-% Estimate infrastructure and operational costs.  
-% Plan for future growth and scalability.
-
-% \newpage
-% %----------------------------
-% \section{Failures and Risks}
-% Discuss potential system failures such as:
-% \begin{itemize}
-%   \item Dependency failures
-%   \item Traffic overflow
-%   \item Performance degradation
-%   \item Logic bugs
-% \end{itemize}
-
-% Identify risks such as external dependencies or resource limitations.  
-% Include potential mitigation strategies.
-
-% \newpage
-% %----------------------------
-% \section{Non-Functional Requirements}
-% Cover scalability, availability, maintainability, reliability, latency, and security.
-
-% \subsection{Scalability}
-% Expected users, transactions, and data volume.
-
-% \subsection{Latency and Availability}
-% Define SLAs (e.g., P99, P50 latency targets).
-
-% \subsection{Maintainability}
-% Explain maintenance expectations and ownership.
-
-% \subsection{Security}
-% Describe security measures and required compliance levels.
-
-% \newpage
-% %----------------------------
-% \section{Testing and Observability}
-% Outline strategies for testing, monitoring, and alerting.
-
-% \subsection{Testing}
-% Explain testing approach: unit, integration, A/B, or stress tests.
-
-% \subsection{Metrics and Alarms}
-% List key performance metrics, dashboards, and alert configurations.
-
-% \newpage
-% %----------------------------
-% \section{Future Improvements}
-% List planned features or improvements for future releases.
-
-% \newpage
-% %----------------------------
+%----------------------------
 \section{FAQs}
-Include frequently asked questions and their answers.
-
+ 
 question?
 answer here
-
+ 
 \newpage
 %----------------------------
 \appendix
 \section{Appendix A: Subtitle (Optional)}
 Include detailed technical analysis or supporting data.
-
+ 
 \newpage
 %----------------------------
 \section{Glossary}
 \begin{description}
   \item[ex1] example definition
+  \item[DataMatrix] A 2D matrix barcode format capable of encoding data in a small footprint, decodable even when rotated or viewed at an angle.
+  \item[pylibdmtx] Python wrapper for libdmtx, used to decode DataMatrix codes from image frames.
 \end{description}
-
+ 
 \newpage
 %----------------------------
 \section{References}
 \begin{itemize}
   \item Service 1: \url{https://example.com}
 \end{itemize}
-
+ 
 \end{document}
