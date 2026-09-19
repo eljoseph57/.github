@@ -1,0 +1,247 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{titlesec}
+\usepackage{parskip}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue,
+    citecolor=blue
+}
+
+\title{Nimble-RX Onboarding}
+\author{Tyler Dinh}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Overview}
+Nimble-RX is a pharmacy robotics project focused on building an autonomous robot capable of interacting with a pharmacist, perceiving its environment, and manipulating prescriptions (e.g., pill bottles). This document provides resources for members to get up to speed with different aspects of the project.
+
+%% -------------------------------------------------------
+\section{Software: Interaction}
+\label{sec:interface}
+%% -------------------------------------------------------
+
+The Interaction (Interface) subsystem enables the robot to communicate back and forth naturally with pharmacists via STT and TTS and provides a frontend for monitoring and control.
+
+\subsection{Speech-to-Text}
+The robot must receive natural language commands from the pharmacist (e.g., ``Pick up Prescription A, Prescription B''). A low-latency, seamless STT pipeline is critical.
+
+\textbf{Key considerations:}
+\begin{itemize}[nosep]
+    \item Streaming inference for real-time responsiveness
+    \item Robustness to background noise
+\end{itemize}
+
+\textbf{Resources:}
+\begin{itemize}[nosep]
+    \item Parakeet STT: \url{https://github.com/openai/whisper}
+    \item ``An Edge-Enabled Low-Latency Cross-Lingual Speech-to-Text Framework for Humanoid Robots'' (2026): \url{https://journals.sagepub.com/doi/10.1177/2167647X261438099}
+\end{itemize}
+
+\subsection{Text-to-Speech}
+The robot must confirm actions verbally (e.g., ``You requested me to pick up Prescription A and Prescription B, would you like me to pick up anything else?''). Again, low latency is essential, so we will use models optimized for this metric (such as those that are small with high performance).
+
+\textbf{Resources:}
+\begin{itemize}[nosep]
+    \item Kokoro TTS: \url{https://huggingface.co/hexgrad/Kokoro-82M}
+\end{itemize}
+
+\subsection{LLM Fine-Tuning for Conversational Interaction}
+A fine-tuned LLM used as the robot's brain can make robot-to-pharmacist dialogue more natural and context-aware.
+
+\textbf{Resources:}
+\begin{itemize}[nosep]
+    \item ``When Robots Get Chatty: Grounding Multimodal Human-Robot Conversation'' (2024): \url{https://arxiv.org/html/2407.00518v1}
+    \item ``Understanding Large-Language Model (LLM)-powered Human-Robot Interaction'' (2024): \url{https://peopleandrobots.wisc.edu/wp-content/uploads/sites/1469/2025/02/3610977.3634966.pdf}
+    \item Hugging Face LLM Fine-Tuning Guide: \url{https://huggingface.co/docs/autotrain/llm_finetuning}
+\end{itemize}
+
+\subsection{Frontend Interface}
+A user-facing web application (TypeScript/React) for the pharmacist to monitor robot status, view task queues, and override actions. The backend communicates with the robot. Also responsible for interface-related safety tasks such as emergency stop buttons and confirmation dialogs.
+
+\textbf{Approach:}
+\begin{itemize}[nosep]
+    \item A TypeScript-based frontend provides a responsive UI accessible from a pharmacist's desktop or mobile device.
+    \item Real-time robot status updates via WebSockets.
+    \item Safety-critical actions (emergency stop) require explicit user confirmation.
+    \item The frontend can also serve as a data collection interface for labeling and verifying teleoperation episodes.
+\end{itemize}
+
+\textbf{Resources:}
+\begin{itemize}[nosep]
+    \item ``A Framework for Low-Latency, LLM-Driven Multimodal Interaction on the Pepper Robot'' (2026): \url{https://arxiv.org/html/2603.21013v1}
+\end{itemize}
+
+%% -------------------------------------------------------
+\section{Software: Perception}
+\label{sec:perception}
+%% -------------------------------------------------------
+
+A robot should verify the environment and its contained objects so that (1)~it does not hallucinate and (2)~it can correct its hallucinations when they occur.
+
+\textbf{General Resources:}
+\begin{itemize}[nosep]
+    \item PaddleOCR -- lightweight, multilingual OCR: \url{https://github.com/PaddlePaddle/PaddleOCR}
+    \item ``An Accurate Deep Learning-Based System for Automatic Pill Identification'' (2023): \url{https://pmc.ncbi.nlm.nih.gov/articles/PMC9883737/}
+    \item Cognex OCR for prescription scanning: \url{https://www.cognex.com/en/applications/optical-character-recognition/ocr-for-prescription-scanning}
+\end{itemize}
+
+\subsection{DataMatrix Barcode Decoding}
+DataMatrix barcodes on prescriptions encode metadata. The robot must decode these to answer ``What did we just pick up?''
+
+\textbf{Resources:}
+\begin{itemize}[nosep]
+    \item OpenCV - main computer vision library in Python for images / videos: \url{https://opencv.org}
+    \item pylibdmtx -- Python library for reading/writing DataMatrix codes: \url{https://pypi.org/project/pylibdmtx/}
+    \item GS1 DataMatrix White Paper (NCPDP): \url{https://www.ncpdp.org/NCPDP/media/pdf/WhitePaper/GS1-DataMatrix-White-Paper-v1.pdf}
+    \item ``How to Make a Barcode Reader in Python'' (GeeksforGeeks): \url{https://www.geeksforgeeks.org/python/how-to-make-a-barcode-reader-in-python/}
+\end{itemize}
+
+\subsection{Safety Considerations}
+Perception-related safety includes verifying that the robot has identified the correct pill bottle before grasping, and cross-referencing OCR/barcode outputs against expected prescriptions.
+
+%% -------------------------------------------------------
+\section{Software: Interaction}
+\label{sec:interaction}
+%% -------------------------------------------------------
+
+Given a natural language command and image(s) of the environment, the robot outputs an \emph{action chunk}. This output is a sequence of action vectors describing deltas for end-effector actions, which drives low-level control.
+
+\subsection{Vision-Language-Action (VLA) Models}
+VLAs unify vision, language, and action modalities to produce low level robot control commands. This is the core of our work.
+
+\textbf{Resources:}
+\begin{itemize}[nosep]
+    \item ``Vision-Language-Action Models for Robotics: A Review Towards Real-World Applications'' (2025): \url{https://ieeexplore.ieee.org/document/11164279}
+\end{itemize}
+
+\subsection{NORA 1.5}
+NORA is a 3B-parameter VLA model built on Qwen-2.5-VL-3B. NORA~1.5 integrates a flow-matching action expert with an autoregressive backbone and uses DPO with world-model and action-based preference rewards on top of the base NORA model. It achieves SOTA performance on several benchmarks while its inference is possible on consumer GPUs (maybe even your laptop?).
+
+\textbf{Resources:}
+\begin{itemize}[nosep]
+    \item ``NORA-1.5: A Vision-Language-Action Model Trained using World Model- and Action-based Preference Rewards`` (2025): \url{https://arxiv.org/abs/2511.14659}
+\end{itemize}
+
+\subsection{High-Level planning on top of a low-level planning loop}
+There is some interesting work to be done in placing a high-level LLM/VLM planner above the VLA low-level planner. The high-level planner could decompose tasks (e.g., ``fill prescription X'') into sub-tasks, while the VLA handles the actions needed for motor control.
+
+\textbf{Resources:}
+\begin{itemize}[nosep]
+    \item ``MEMORA: Embodied Action Memory from Egocentric Videos for
+Reasoning and Planning`` (2026): \url{https://arxiv.org/pdf/2607.14252}
+\end{itemize}
+
+\subsection{Teleoperation Data Collection}
+Training and fine-tuning VLAs require high-quality demonstration episodes of (prompt, images, action output) collected via human teleoperation.
+
+\textbf{Resources:}
+\begin{itemize}[nosep]
+    \item LeRobot (Hugging Face) -- framework for data collection and policy training: \url{https://github.com/huggingface/lerobot}
+\end{itemize}
+
+\subsection{Safety Considerations}
+Interaction-related safety includes verifying that generated actions are within joint limits and workspace bounds, detecting collisions before execution, and implementing fallback behaviors when the VLA produces uncertain outputs.
+
+%% -------------------------------------------------------
+\section{Integration}
+\label{sec:integration}
+%% -------------------------------------------------------
+
+The Integration subsystem connects software outputs to physical hardware, enabling the robot to move and sense its environment.
+
+\subsection{Linear Actuator}
+A long-standing project to enable the robot to move forwards and backwards between pharmacy shelves. This is essential since the robot is not a fully humanoid platform.
+
+\textbf{Resources:}
+\begin{itemize}[nosep]
+    \item stuff here
+\end{itemize}
+
+\subsection{Load Sensor (HX711)}
+A load sensor determines if the picked-up bottle has the correct weight (based on pill count), serving as a safety check.
+
+\textbf{Resources:}
+\begin{itemize}[nosep]
+    \item SparkFun HX711 Load Cell Amplifier Hookup Guide: \url{https://learn.sparkfun.com/tutorials/load-cell-amplifier-hx711-breakout-hookup-guide}
+    \item hx711-rpi-py -- Python bindings for Raspberry Pi: \url{https://pypi.org/project/hx711-rpi-py/}
+\end{itemize}
+
+\textbf{Notes for now:}
+\begin{itemize}[nosep]
+    \item Connect the HX711 to a Raspberry Pi.
+    \item Calibrate with a known weight to determine the scale factor.
+    \item Design a PCB board integrating strain gauges, the HX711, and a connector for the Raspberry Pi.
+    \item 3D-print a mounting bracket and use aluminum for the load cell platform.
+\end{itemize}
+
+%% -------------------------------------------------------
+\section{Environment}
+\label{sec:environment}
+%% -------------------------------------------------------
+
+A quiet (low-noise) environment is necessary for perception systems to function correctly. Additionally, the robot needs shelves and objects to interact with.
+
+\subsection{Shelf Design}
+Design or source a shelf for the robot to interact with pill bottles and prescriptions, mimicking a real pharmacy setting.
+
+\textbf{Resources:}
+\begin{itemize}[nosep]
+    \item just look at what pharmacies do
+\end{itemize}
+
+\subsection{Prescription Proxy Objects}
+Items in different colors, shapes, and sizes to act as prescriptions on the shelf. These are picked up by the robot during training and evaluation.
+
+\textbf{Resources:}
+\begin{itemize}[nosep]
+    \item just different things you think of that could be picked up!
+\end{itemize}
+
+%% -------------------------------------------------------
+\section{Prescription}
+\label{sec:prescription}
+%% -------------------------------------------------------
+
+The Prescription subsystem enables the robot to physically interact with prescriptions (more of a focus on pill bottles right now).
+
+\subsection{Pill Bottle Opener}
+A platform that presses down while spinning to open pill bottles, functioning similarly to an automatic can opener.
+
+\textbf{Approach:}
+\begin{itemize}[nosep]
+    \item Design a compliant mechanism that applies downward force while rotating.
+    \item Use a servo or stepper motor for rotational control.
+    \item Implement torque sensing to detect when the cap has broken free.
+    \item Consider 3D-printed adaptive grippers for different cap sizes.
+\end{itemize}
+
+\textbf{Resources:}
+\begin{itemize}[nosep]
+    \item RoboPharma: \url{https://www.robopharma.com/technology/kirby-lester-inventory-counter/}
+\end{itemize}
+
+\subsection{Pill Bottle Closer}
+After the robot opens a bottle, it must reclose it. This requires aligning with the threading, which may involve:
+\begin{itemize}[nosep]
+    \item Force/torque feedback to detect thread engagement.
+    \item A rotational + axial actuation system.
+    \item Computer vision to verify cap orientation before closing.
+\end{itemize}
+
+\subsection{Funnel Counting System}
+A funnel-based system that counts pills as they pass through, cutting off flow after a prescribed amount.
+
+\textbf{Resources:}
+\begin{itemize}[nosep]
+    \item RoboPharma: \url{https://www.robopharma.com/technology/kirby-lester-inventory-counter/}
+\end{itemize}
+
+\end{document}
